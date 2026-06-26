@@ -13,6 +13,24 @@ set DEFAULT_MODE "id->en"
 mkdir -p $CONFIG_DIR
 
 # ==================================================
+# COLOR PALETTE
+# ==================================================
+
+set c_mode (set_color d33d2c)
+set c_model (set_color a9ab25)
+set c_reset (set_color d6c8a3)
+
+# ==================================================
+# GUM CONFIGURATION
+# ==================================================
+
+set -gx GUM_CHOOSE_HEADER_FOREGROUND "#d6c8a3"
+set -gx GUM_CHOOSE_ITEM_FOREGROUND "#888888"
+set -gx GUM_CHOOSE_CURSOR_FOREGROUND "#c23b2c"
+
+set -gx GUM_INPUT_CURSOR_FOREGROUND "#FFFFFF"
+
+# ==================================================
 # LOAD CONFIG
 # ==================================================
 
@@ -72,10 +90,16 @@ end
 
 function choose_language
 
-	set -g TRANSLATION_MODE (gum choose \
+	set selected_mode (gum choose \
 		"id->en" \
 		"en->id" 
 	)
+	
+	if test -z "$selected_mode"
+		set selected_mode "en->id"
+	end
+
+	set -g TRANSLATION_MODE "$selected_mode"
 
 	save_config
 
@@ -94,6 +118,9 @@ function toggle_language
 
 		case "en->id"
 			set -g TRANSLATION_MODE "id->en"
+
+		case "*"
+			set -g TRANSLATION_MODE "en->id"
 
 	end
 
@@ -163,16 +190,27 @@ $text
 end
 
 # ==================================================
+# STATUS
+# ==================================================
+
+function get_status
+
+	echo "Model : $c_model$MODEL$c_reset"
+	echo "Mode  : $c_mode$TRANSLATION_MODE$c_reset"
+	echo
+end
+
+# ==================================================
 # HEADER
 # ==================================================
 
-echo
+echo "$c_reset"
 echo "Translator Ready"
-echo "Model : $MODEL"
-echo "Mode  : $TRANSLATION_MODE"
-echo
+
+get_status
+
 echo "Commands:"
-echo "  /mode"
+echo "  /toggle"
 echo "  /lang"
 echo "  /model"
 echo "  /status"
@@ -185,7 +223,11 @@ echo
 
 while true
 
-	read -P "[$TRANSLATION_MODE][$MODEL]> " text 
+	set text (gum input \
+		--prompt "[$c_mode$TRANSLATION_MODE$c_reset][$c_model$MODEL$c_reset]> " \
+		--placeholder "Type text to translate...")
+
+	echo "[$c_mode$TRANSLATION_MODE$c_reset][$c_model$MODEL$c_reset]> $text"
 
 	test -z "$text"
 	and continue
@@ -198,9 +240,7 @@ while true
 		case "/status"
 			
 			echo
-			echo "Model : $MODEL"
-			echo "Mode  : $TRANSLATION_MODE"
-			echo
+			get_status
 			continue
 
 		case "/lang"
@@ -208,17 +248,17 @@ while true
 			choose_language
 
 			echo
-			echo "Mode changed to: $TRANSLATION_MODE"
+			echo "Mode changed to: $c_mode$TRANSLATION_MODE"
 			echo
 
 			continue
 
-		case "/mode"
+		case "/toggle"
 
 			toggle_language
 
 			echo
-			echo "Mode changed to: $TRANSLATION_MODE"
+			echo "Mode changed to: $c_mode$TRANSLATION_MODE"
 			echo
 
 			continue
@@ -228,7 +268,7 @@ while true
 			choose_model
 
 			echo
-			echo "Model changed to: $MODEL"
+			echo "Model changed to: $c_model$MODEL"
 			echo
 
 			continue
@@ -237,11 +277,11 @@ while true
 
 	set prompt (build_prompt "$TRANSLATION_MODE" "$text")
 
-	echo
+	set_color white 
+
+	echo 
 
 	ollama run "$MODEL" "$prompt"
-
-	echo
 
 end
 
